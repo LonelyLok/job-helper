@@ -1,3 +1,0 @@
-selenium==4.10.0
-pypdf==3.12.2
-openai==0.27.8

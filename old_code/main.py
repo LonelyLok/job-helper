@@ -1,5 +1,5 @@
-from helper import Helper
-from google_api import text_gen, chat
+from old_code.helper import Helper
+from old_code.google_api import text_gen, chat
 import json
 
 helper_instance = Helper()
