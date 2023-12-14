@@ -13,7 +13,7 @@ async function getJob(jobId: number) {
 const contentHelper = (contentList: string[]) => {
     const contentElements = contentList.map((item, index) => (
         <p key={index}>{item}</p>
-      ))
+    ))
     return contentElements
 }
 
@@ -21,11 +21,11 @@ const contentHelper = (contentList: string[]) => {
 
 function JobCard({ job }: { job: any }) {
     const [open, setOpen] = useState(false);
-    const [jobContent, setJobContent] =  useState<React.ReactElement[] | null>(null);
+    const [jobContent, setJobContent] = useState<React.ReactElement[] | null>(null);
 
     const handleOpenJob = async (jobId: number) => {
         const jobData = await getJob(jobId)
-        const { content_list }:{content_list: string[]} = jobData
+        const { content_list }: { content_list: string[] } = jobData
         setJobContent(contentHelper(content_list))
         setOpen(true);
     };
@@ -34,11 +34,20 @@ function JobCard({ job }: { job: any }) {
         setOpen(false);
     };
 
-    const modalStyle = { top: '50%', left: '50%', transform: 'translate(-50%, -50%)', position: 'absolute', backgroundColor: 'black', padding: '16px 32px', borderRadius: '8px',maxWidth: '80%', 'maxHeight': '80%',overflowY: 'auto'  }
-    const contentStyle = {
-        fontSize: '0.8em',  // Increase font size for better readability
-        lineHeight: '1.5',  // Increase line height for better readability
-    };
+    const modalStyle = {
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        position: 'absolute',
+        backgroundColor: 'black',
+        padding: '16px 32px',
+        borderRadius: '8px',
+        maxWidth: '80%',
+        maxHeight: '80%',
+        overflowY: 'auto',
+        border: '1px solid white'
+    }
+
     return (
         <div>
             <Card style={{ backgroundColor: 'rgba(179, 176, 175, 1.0)', width: '300px', height: '200px' }} onClick={() => handleOpenJob(job.id)}>
