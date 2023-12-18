@@ -2,8 +2,10 @@
 import JobCard from './component/job-card'
 import React, { useState, useEffect } from 'react';
 
+const localHostUrl = 'http://localhost:5000'
+
 async function getData(){
-  const res = await fetch('http://localhost:5000/all_discord_jobs')
+  const res = await fetch(`${localHostUrl}/all_discord_jobs`)
   return res.json()
 }
 
@@ -13,7 +15,7 @@ export default function Home() {
   const [fileText, setFileText] = useState('');
   useEffect(() => {
     const getData = async () => {
-      const res = await fetch('http://localhost:5000/all_discord_jobs', {
+      const res = await fetch(`${localHostUrl}/all_discord_jobs`, {
         method: 'GET',
         cache: 'no-cache' // This ensures no caching for this request
       });
@@ -28,7 +30,7 @@ export default function Home() {
     if(file){
       const formData = new FormData();
       formData.append('file', file);
-      const response = await fetch('http://localhost:5000/convert_pdf_to_text', {
+      const response = await fetch(`${localHostUrl}/convert_pdf_to_text`, {
         method: 'POST',
         body: formData,
       });
@@ -44,7 +46,7 @@ export default function Home() {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
       {jobs.map((job:any, index:number) => (
-        <JobCard key={index} job={job} />
+        <JobCard key={index} job={job} fileText={fileText} />
       ))}
     </div>
     </main>

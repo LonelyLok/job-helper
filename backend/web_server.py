@@ -57,7 +57,7 @@ def google_ai_read():
         data = request.data
 
     model = genai.GenerativeModel('gemini-pro')
-    response = model.generate_content(data)
+    response = model.generate_content(data["data"])
     return response.text
 
 @app.route('/convert_pdf_to_text',methods=['POST'])

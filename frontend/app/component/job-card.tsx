@@ -10,6 +10,22 @@ async function getJob(jobId: number) {
     return res.json()
 }
 
+async function askGoogle(jobText: string, fileText:string){
+    const jobMatchPrompt = `Here is a resume in text form: ${fileText}.
+                          Here is the job description: ${jobText}.
+                          Rate this resume from 1 to 10, 1 mean not a good fit and 10 mean good fit.
+                          Provide detail explanation on your analysis.
+                        `
+    const res = await fetch(`http://localhost:5000/google_ai_read`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ data: jobMatchPrompt })
+    });
+      return res.text()
+}
+
 const contentHelper = (contentList: string[]) => {
     const contentElements = contentList.map((item, index) => (
         <p key={index}>{item}</p>
@@ -19,14 +35,15 @@ const contentHelper = (contentList: string[]) => {
 
 
 
-function JobCard({ job }: { job: any }) {
+function JobCard({ job, fileText }: { job: any; fileText: string }) {
     const [open, setOpen] = useState(false);
-    const [jobContent, setJobContent] = useState<React.ReactElement[] | null>(null);
+    const [jobContent, setJobContent] = useState<any>(null);
 
     const handleOpenJob = async (jobId: number) => {
         const jobData = await getJob(jobId)
         const { content_list }: { content_list: string[] } = jobData
-        setJobContent(contentHelper(content_list))
+        const googleResp:string = await askGoogle(content_list.join('\n'),fileText)
+        setJobContent(googleResp)
         setOpen(true);
     };
 
