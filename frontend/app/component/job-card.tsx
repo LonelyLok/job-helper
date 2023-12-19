@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from 'react';
-import { Card, CardContent, Typography, Modal } from '@mui/material';
+import { CircularProgress, Card, CardContent, Typography, Modal } from '@mui/material';
 
 const localCache = {}
 
@@ -38,17 +38,21 @@ const contentHelper = (contentList: string[]) => {
 function JobCard({ job, fileText }: { job: any; fileText: string }) {
     const [open, setOpen] = useState(false);
     const [jobContent, setJobContent] = useState<any>(null);
+    const [loading, setLoading] = useState(false)
 
     const handleOpenJob = async (jobId: number) => {
+        setLoading(true)
+        setOpen(true);
         const jobData = await getJob(jobId)
         const { content_list }: { content_list: string[] } = jobData
         const googleResp:string = await askGoogle(content_list.join('\n'),fileText)
         setJobContent(googleResp)
-        setOpen(true);
+        setLoading(false);
     };
 
     const handleCloseJob = () => {
         setOpen(false);
+        setJobContent(null)
     };
 
     const modalStyle = {
@@ -84,7 +88,7 @@ function JobCard({ job, fileText }: { job: any; fileText: string }) {
                 aria-describedby="simple-modal-description"
             >
                 <div style={modalStyle}>
-                    {jobContent}
+                    {loading ? <CircularProgress /> : jobContent}
                 </div>
             </Modal>
         </div>

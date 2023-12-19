@@ -1,7 +1,7 @@
 ### Job Helper
 
 #### a program that 
-   - read discord career page and look for jobs that base on provided resume
+   - compare your resume to the job description on discord career page and provide rating out of 10
 
 ### Still work in progress
 
