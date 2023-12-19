@@ -6,3 +6,5 @@
 ### Still work in progress
 
 ### One day I will get a job in discord COPIUM XDD
+
+![Uploading job-helper-demo.gif…]()
