@@ -46,7 +46,7 @@ export default function Home() {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
       {jobs.map((job:any, index:number) => (
-        <JobCard key={index} job={job} fileText={fileText} />
+        <JobCard key={index} job={{...job, job_url: `https://discord.com/jobs/${job.id}`}} fileText={fileText} />
       ))}
     </div>
     </main>

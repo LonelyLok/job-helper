@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from 'react';
-import { CircularProgress, Card, CardContent, Typography, Modal } from '@mui/material';
+import { Button, CircularProgress, Card, CardContent, Typography, Modal } from '@mui/material';
 
 const localCache = {}
 
@@ -88,7 +88,14 @@ function JobCard({ job, fileText }: { job: any; fileText: string }) {
                 aria-describedby="simple-modal-description"
             >
                 <div style={modalStyle}>
-                    {loading ? <CircularProgress /> : jobContent}
+                    {loading ? <CircularProgress /> : <div>
+                        <p>{jobContent}</p>
+                        <a href={job.job_url}>
+                            <Button>
+                                Link to job post
+                            </Button>
+                        </a>
+                        </div>}
                 </div>
             </Modal>
         </div>
