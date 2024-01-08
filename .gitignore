@@ -2,3 +2,6 @@
 __pycache__/
 *.pyc
 geckodriver.log
+/db/mongo-data/
+localstack/*
+backend/fake_resume.pdf
