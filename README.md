@@ -1,11 +1,24 @@
-### Job Helper
+## Job Helper
 
-#### a program that 
-   - compare your resume to the job description on discord career page and provide rating out of 10
+### a web app that 
+   - Send the your resume and job descrption to open ai chatgpt and ask it to rate how fit are you for the job out of 10
 
 ### Still work in progress
 
+### Tech stack
+- NextJS typescript frontend
+- Flask python backend
+- MongoDB
+- Localstack (mock AWS S3 for file storage)
+
+### Feature Highlight
+- :trollface: It has a login page :trollface:
+![job-helper-demo-1](readme_image/demo_login.gif)
+
+- :trollface: You can create and delete open ai assistant :trollface:
+![job-helper-demo-2](readme_image/demo_assistant.gif)
+
+
 ### One day I will get a job in discord COPIUM XDD
 
-![job-helper-demo](https://github.com/LonelyLok/job-helper/assets/40349145/50610215-fd2b-4640-8978-de8893c5293b)
 
