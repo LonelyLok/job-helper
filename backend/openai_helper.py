@@ -57,6 +57,16 @@ def add_message_to_thread(fig):
     )
     return res
 
+def create_and_run(fig):
+    run = client.beta.threads.create_and_run(
+        assistant_id=fig.get('assistant_id'),
+        thread={
+            "messages": fig.get("messages")
+        }
+    )
+    return run
+
+
 
 def run_thread(fig):
     res = client.beta.threads.runs.create(
@@ -76,8 +86,12 @@ def retrieve_run_thread(fig):
 
 
 def list_thread_messages(fig):
+    limit = fig.get('limit', 20)
+    order = fig.get('order', 'desc')
     res = client.beta.threads.messages.list(
-        thread_id=fig.get('thread_id')
+        thread_id=fig.get('thread_id'),
+        limit=limit,
+        order=order
     )
     return res
 

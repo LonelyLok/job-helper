@@ -60,6 +60,20 @@ class UserApi:
         return assistant_data
         
 
+    def get_assistant_for_user(self, user_id, assistant_id):
+        if(not user_id or not assistant_id):
+            raise ValueError("Internal Error")
+        
+        user_assistant_data = self.user_assistant_dao.find_by_user_id_and_assistant_id(user_id=user_id, assistant_id=assistant_id)
+        if(not user_assistant_data):
+            raise ValueError("Internal Error")
+        
+        assistant_data = self.assistant_dao.find_by_id(id=assistant_id)
+        if(not assistant_data):
+            raise ValueError("Internal Error")
+        
+        openai_assistant_id = assistant_data.get('external_id')
+        return openai_assistant_id
      
 
     def create_user(self, username, password, name):

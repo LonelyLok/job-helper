@@ -17,3 +17,6 @@ class S3:
     
     def delete_object(self, key, bucket):
         return self.client.delete_object(Bucket=bucket, Key=key)
+    
+    def get_object(self, key, bucket):
+        return self.client.get_object(Bucket=bucket, Key=key)

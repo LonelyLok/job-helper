@@ -8,88 +8,141 @@ import {
   Typography,
   Modal,
   Drawer,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  OutlinedInput,
 } from '@mui/material';
 import ReactMarkdown from 'react-markdown';
 
 async function getJob(jobId: number) {
-  const res = await fetch(`http://localhost:5000/job?id=${jobId}`, {credentials: 'include'});
+  const res = await fetch(`http://localhost:5000/job?id=${jobId}`, {
+    credentials: 'include',
+  });
   return res.json();
 }
 
-async function askGoogle(jobText: string, fileText: string) {
-  const jobMatchPrompt = `Here is a resume in text form: ${fileText}.
-                          Here is the job description: ${jobText}.
-                          Rate this resume from 1 to 10, 1 mean not a good fit and 10 mean good fit.
-                          Provide detail explanation on your analysis.
-                        `;
-  const res = await fetch(`http://localhost:5000/google_ai_read`, {
+async function jobFitInit(assistantId: number, fileId: number, jobText: string) {
+  const res = await fetch(`http://localhost:5000/job_fit_init`, {
     method: 'POST',
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ data: jobMatchPrompt }),
+    body: JSON.stringify({ assistant_id: assistantId, file_id: fileId, job_text: jobText }),
   });
-  return res.text();
+  return await res.json();
 }
 
-async function setUpThreadAndAsk(assistantId: string, jobData: string) {
-  const createThreadRes = await fetch(`http://localhost:5000/create_thread`, {
+async function checkRunStatus(runId: string, threadId: string) {
+  const res = await fetch(`http://localhost:5000/check_run_status`, {
     method: 'POST',
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
     },
+    body: JSON.stringify({ run_id: runId, thread_id: threadId }),
   });
-  const data = await createThreadRes.json();
-  const threadId = data.thread_id;
+  return await res.json();
+}
 
-  const addMessageRes = await fetch(
-    `http://localhost:5000/add_message_to_thread`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        data: {
-          thread_id: threadId,
-          role: 'user',
-          content: `How fit am I out of 10 for this job descrption: ${jobData}`,
-        },
-      }),
+async function getMessages(threadId: string) {
+  try {
+    const response = await fetch(`http://localhost:5000/get_thread_messages?thread_id=${threadId}&limit=${1}&order=${"desc"}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
     }
-  );
+    const data = await response.json();
+    return data
+  } catch (error) {
+    console.error('There has been a problem with your fetch operation:', error);
+  }
+  return null
 
-  const runRes = await fetch(`http://localhost:5000/run_and_retrieve`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      data: {
-        thread_id: threadId,
-        assistant_id: assistantId,
-        instructions:
-          'Given the user resume and the job description, rate how fit the user would be for the job out of 10. Your response has to within 100 words',
-      },
-    }),
-  });
-
-  return await runRes.json();
 }
 
-const contentHelper = (contentList: string[]) => {
-  const contentElements = contentList.map((item, index) => (
-    <p key={index}>{item}</p>
-  ));
-  return contentElements;
-};
-
-function JobCard({ job, fileText }: { job: any; fileText: string }) {
+function JobCard({ job, fileText, assistants, files }: { job: any; fileText: string, assistants: any[]; files: any[] }) {
   const [open, setOpen] = useState(false);
   const [jobContent, setJobContent] = useState<any>(null);
-  const [aiContent, setAIContent] = useState<any>(null);
+  const [jobText, setJobText] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [sideContentOpen, setSideContentOpen] = useState(false);
+  const [selectedOption, setSelectedOption] = useState<any>(null)
+  const [selectedOption2, setSelectedOption2] = useState<any>(null)
+
+  const [loadingResult, setLoadingResult] = useState(false)
+
+  const [resultText, setResultText] = useState<any>(null)
+
+  const handleSelectChange = (event: any) => {
+    if (event.target.value) {
+      setSelectedOption(event.target.value)
+    }
+  }
+
+  const handleSelectChange2 = (event: any) => {
+    if (event.target.value) {
+      setSelectedOption2(event.target.value)
+    }
+  }
+
+  const handleSubmitJobInit = async () => {
+    setLoadingResult(true);
+    const assistant = selectedOption;
+    const file = selectedOption2;
+    if (!assistant || !file) {
+      return
+    }
+
+    const response = (assistant?._id && file?._id)
+      ? await jobFitInit(assistant._id, file._id, jobText)
+      : null;
+
+    if (!response) {
+      return
+    }
+    const { run_id, thread_id } = response.data;
+    let counter = 0;
+
+    const checkStatus = () => {
+      return new Promise(async (resolve, reject) => {
+        if (counter < 12) { // 12 * 10 seconds = 120 seconds
+          const response = await checkRunStatus(run_id, thread_id);
+          if (response.status === 'completed') {
+            resolve(true);
+          } else {
+            counter++;
+            setTimeout(() => {
+              checkStatus().then(resolve).catch(reject);
+            }, 10000);
+          }
+        } else {
+          console.log('Max check time exceeded');
+          resolve(false);
+        }
+      });
+    };
+
+    const check = await checkStatus();
+
+    if(!check) {
+      return
+    }
+
+    const messageRes = await getMessages(thread_id);
+
+    if(!messageRes){
+      return;
+    }
+    const message = messageRes.data;
+    setLoadingResult(false);
+    setResultText(message);
+  }
 
   const handleOpenJob = async (jobId: number) => {
     setLoading(true);
@@ -99,27 +152,26 @@ function JobCard({ job, fileText }: { job: any; fileText: string }) {
       content_text,
       content_html,
     }: { content_text: string; content_html: string } = jobData;
-    // const googleResp:string = await askGoogle(content_list.join('\n'),fileText)
-    // const firstMessageData = await setUpThreadAndAsk(testAssistantId, content_text)
-    // setAIContent(firstMessageData.data)
     setJobContent(content_html);
+    setJobText(content_text);
     setLoading(false);
   };
 
   const handleCloseJob = () => {
-    setOpen(false);
-    setSideContentOpen(false);
-    setJobContent(null);
+    if (!sideContentOpen) {
+      setOpen(false);
+      setJobContent(null);
+    }
   };
 
-  const toggleDrawer = (open: any) => (event: any) => {
-    if (
-      event.type === 'keydown' &&
-      (event.key === 'Tab' || event.key === 'Shift')
-    ) {
-      return;
-    }
-    setSideContentOpen(open);
+  const handleDrawerOpen = () => {
+    setSideContentOpen(!sideContentOpen);
+  };
+
+  const handleDrawerClose = (event: any) => {
+    setSideContentOpen(false);
+    setLoadingResult(false);
+    setResultText(null);
   };
 
   const modalStyle: React.CSSProperties = {
@@ -147,6 +199,9 @@ function JobCard({ job, fileText }: { job: any; fileText: string }) {
   const footerStyle: React.CSSProperties = {
     padding: '10px', // Add some padding around the button
   };
+
+  const lightBlueColor = 'rgb(78, 219, 255)';
+  const lightBlueColorA = 'rgba(78, 219, 255, 0.5)';
 
   return (
     <div>
@@ -187,7 +242,7 @@ function JobCard({ job, fileText }: { job: any; fileText: string }) {
                   }}
                 >
                   <p style={{ textAlign: 'center' }}>Job Description</p>
-                  <Button onClick={toggleDrawer(true)}>Open AI Analysis</Button>
+                  <Button onClick={handleDrawerOpen}>Open AI Analysis</Button>
                 </div>
                 <div dangerouslySetInnerHTML={{ __html: jobContent }}></div>
                 <div style={footerStyle}>
@@ -198,17 +253,84 @@ function JobCard({ job, fileText }: { job: any; fileText: string }) {
               </div>
             </div>
           )}
+          <Drawer
+            anchor='right'
+            open={sideContentOpen}
+            onClose={handleDrawerClose}
+            style={{ zIndex: 1400 }}
+          >
+            <div
+              style={{
+                width: 400,
+                padding: 10,
+                backgroundColor: 'rgb(25, 24, 48)',
+                height: '100%',
+                color: lightBlueColor,
+                zIndex: 1500,
+              }}
+            >
+              <Typography sx={{ mb: 2 }}>
+                <ReactMarkdown>{'**Hello**'}</ReactMarkdown>
+              </Typography>
+              <FormControl variant="outlined" sx={{ width: '100%', color: lightBlueColor, '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: lightBlueColor }, '&:hover fieldset': { borderColor: lightBlueColor }, '&.Mui-focused fieldset': { borderColor: lightBlueColor } } }}>
+                <InputLabel id="demo-simple-select-outlined-label" sx={{ color: lightBlueColorA, }}>Assistant</InputLabel>
+                <Select
+                  labelId="demo-simple-select-outlined-label"
+                  id="demo-simple-select-outlined"
+                  value={selectedOption}
+                  onChange={handleSelectChange}
+                  label="Assistant"
+                  MenuProps={{
+                    style: { zIndex: 5000 }
+                  }}
+                  input={<OutlinedInput label="Assistant" sx={{ color: lightBlueColor }} />}
+                  sx={{
+                    '&& .MuiSelect-icon': { color: lightBlueColor },
+                    '&& .MuiSelect-select': { color: lightBlueColor },
+                    mb: 3,
+                  }}
+                >
+                  {assistants.map((assistant: any) => {
+                    return (
+                      <MenuItem key={assistant._id} value={assistant}>{assistant.name}</MenuItem>
+                    )
+                  })}
+                </Select>
+              </FormControl>
+              <FormControl variant="outlined" sx={{ width: '100%', color: lightBlueColor, '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: lightBlueColor }, '&:hover fieldset': { borderColor: lightBlueColor }, '&.Mui-focused fieldset': { borderColor: lightBlueColor } } }}>
+                <InputLabel id="demo-simple-select-outlined-label" sx={{ color: lightBlueColorA }}>Resume</InputLabel>
+                <Select
+                  labelId="demo-simple-select-outlined-label"
+                  id="demo-simple-select-outlined"
+                  value={selectedOption2}
+                  onChange={handleSelectChange2}
+                  label="Resume"
+                  MenuProps={{
+                    style: { zIndex: 5000 }
+                  }}
+                  input={<OutlinedInput label="Resume" sx={{ color: lightBlueColor }} />}
+                  sx={{
+                    '&& .MuiSelect-icon': { color: lightBlueColor },
+                    '&& .MuiSelect-select': { color: lightBlueColor },
+                    mb: 3,
+                  }}
+                >
+                  {files.map((file: any) => {
+                    return (
+                      <MenuItem key={file._id} value={file}>{file.name}</MenuItem>
+                    )
+                  })}
+                </Select>
+              </FormControl>
+              <Button variant="contained" onClick={() => handleSubmitJobInit()} sx={{ color: lightBlueColor, mb: 3 }}>Submit</Button>
+              <Typography sx={{ mb: 2 }}>
+                {loadingResult && <CircularProgress />}
+                {resultText}
+              </Typography>
+            </div>
+          </Drawer>
         </div>
       </Modal>
-      <Drawer
-        anchor='right'
-        open={sideContentOpen}
-        onClose={toggleDrawer(false)}
-      >
-        <div style={{ width: 400, padding: 10 }}>
-          <ReactMarkdown>{'**hello**'}</ReactMarkdown>
-        </div>
-      </Drawer>
     </div>
   );
 }

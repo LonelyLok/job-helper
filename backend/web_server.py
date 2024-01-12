@@ -74,12 +74,13 @@ def job():
     content = res['content']
     parse_content = html.unescape(content)
     soup = BeautifulSoup(parse_content, 'html.parser')
-    content_list = []
+    content_set = set()
     for tag in soup.find_all(lambda tag: True):
-        if(tag.text not in content_list):
-            content_list.append(tag.text)
+        text = tag.get_text(strip=True)
+        if text:  # Check if text is not empty
+            content_set.add(text)
 
-    res['content_text'] = '\n'.join(content_list)
+    res['content_text'] = '\n'.join(content_set)
     res['content_html'] = str(soup)
     return res
 
@@ -247,14 +248,10 @@ def upload_file_to_s3():
     if(not user_id):
         return jsonify({'message': 'Invalid request'}), 401
     
-    print(request)
-    
     if 'file' not in request.files:
         return jsonify({'message': 'No file part'}), 400
     
     file = request.files['file']
-
-    print(file)
 
     if not file:
         return jsonify({'message': 'No selected file'}), 400
@@ -301,6 +298,107 @@ def delete_file_for_user():
         return jsonify({'message': str(e)}), 400
     
 
+@app.route('/job_fit_init', methods=['POST'])
+@token_required
+def job_fit_init():
+    user_id = request.cookies.get('user_id')
+    if(not user_id):
+        return jsonify({'message': 'Invalid request'}), 401
+    if request.is_json:
+        data = request.get_json()
+    else:
+        data = request.data
+    
+    file_id = data.get('file_id')
+    assistant_id = data.get('assistant_id')
+    job_text = data.get('job_text')
+
+    if(not file_id or not assistant_id or not job_text):
+        return jsonify({'message': 'Invalid request'}), 401
+    
+    try:
+        file_stream = file_api.get_file_and_return_stream(user_id=user_id, file_id=file_id)
+        file_text = file_api.extract_text_from_pdf(pdf_file_stream=file_stream)
+
+        if(not file_text):
+            return jsonify({'message': 'Invalid request'}), 401
+        
+        external_assistant_id = user_api.get_assistant_for_user(user_id=user_id, assistant_id=assistant_id)
+
+        if(not external_assistant_id):
+            return jsonify({'message': 'Invalid request'}), 401
+        
+        messages = [
+            {
+                "role": "user",
+                "content": f"Here is the job description {job_text}"
+            },
+            {
+                "role": "user",
+                "content": f"Here is my resume {file_text}"
+            },
+            {
+                "role": "user",
+                "content": f"Rate how fit I am for this job on a scale of 1 to 10"
+            }
+        ]
+        run = openai_helper.create_and_run({"assistant_id": external_assistant_id, "messages": messages})
+        return jsonify({'message': 'OK', 'data': {'run_id': run.id, 'thread_id': run.thread_id}})
+    except Exception as e:
+        return jsonify({'message': str(e)}), 400
+
+@app.route('/check_run_status', methods=['POST'])
+@token_required
+def check_run_status():
+    user_id = request.cookies.get('user_id')
+    if(not user_id):
+        return jsonify({'message': 'Invalid request'}), 401
+    if request.is_json:
+        data = request.get_json()
+    else:
+        data = request.data
+    
+    thread_id = data.get('thread_id')
+    run_id = data.get('run_id')
+    if(not thread_id or not run_id):
+        return jsonify({'message': 'Invalid request'}), 401
+    checkRes = openai_helper.retrieve_run_thread(
+        {"thread_id": thread_id, "run_id": run_id}
+    )
+
+    if(checkRes.status == "completed"):
+        return jsonify({'status': 'completed'})
+    return jsonify({'status': 'Not completed'})
+
+@app.route('/get_thread_messages', methods=['GET'])
+@token_required
+def get_thread_messages():
+    user_id = request.cookies.get('user_id')
+    if(not user_id):
+        return jsonify({'message': 'Invalid request'}), 401
+    thread_id = request.args.get('thread_id')
+    limit = request.args.get('limit', 20)
+    order = request.args.get('order', 'desc')
+
+    if(not thread_id):
+        return jsonify({'message': 'Invalid request'}), 401
+    
+    try:
+        message_data = openai_helper.list_thread_messages(
+        {"thread_id": thread_id, "limit": limit, "order": order}
+        )   
+        messages_res = message_data.data
+        print(messages_res[0].content[0])
+        data = messages_res[0].content[0].text.value
+    except Exception as e:
+        return jsonify({'message': str(e)}), 400
+    return jsonify({'data': data })
+
+
+    
+
+
+    
 
 if __name__ == '__main__':
     app.run(debug=True)
