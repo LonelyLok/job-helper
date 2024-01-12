@@ -1,5 +1,7 @@
 from mock_aws.s3 import S3
 from file.file_dao import FileDAO
+import io
+from pypdf import PdfReader
 
 class FileApi:
 
@@ -19,6 +21,29 @@ class FileApi:
             raise ValueError("failed insert")
 
         return True
+    
+    def get_file_and_return_stream(self, user_id, file_id):
+        if(not user_id or not file_id):
+            raise ValueError("missing input")
+        file = self.file_dao.find_by_id(file_id)
+        if(not file):
+            raise ValueError("no file found")
+        if(file.get('user_id') != user_id):
+            raise ValueError("user not match")
+        file_key = file.get('key')
+        if(not file_key):
+            raise ValueError("no key")
+        file_res = self.s3.get_object(key=file_key, bucket=self.bucket_name)
+        if(not file_res):
+            raise ValueError("no file found")
+        file_content = file_res['Body'].read()
+        return io.BytesIO(file_content)
+    
+    def extract_text_from_pdf(self, pdf_file_stream):
+        reader = PdfReader(pdf_file_stream)
+        texts = [page.extract_text().replace('\n', ' ') for page in reader.pages]
+        return '\n'.join(texts)
+
     
     def list_file_from_user_id(self, user_id):        
         return self.file_dao.find_by_user_id(user_id=user_id)

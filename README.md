@@ -18,6 +18,9 @@
 - :trollface: You can create and delete open ai assistant :trollface:
 ![job-helper-demo-2](readme_image/demo_assistant.gif)
 
+- :trollface: I don't know what it is doing :trollface:
+![job-helper-demo-3](readme_image/demo-ai-job-fit.gif)
+
 
 ### One day I will get a job in discord COPIUM XDD
 

@@ -9,6 +9,8 @@ const localHostUrl = 'http://localhost:5000'
 
 function JobCardPage() {
   const [jobs, setJobs] = useState([]);
+  const [assistants, setAssistants] = useState([]);
+  const [files, setFiles] = useState([]);
   const [fileText, setFileText] = useState('');
   useEffect(() => {
     const getData = async () => {
@@ -20,7 +22,27 @@ function JobCardPage() {
       const data = await res.json();
       setJobs(data.jobs);
     };
+    const getAssistantsData = async () => {
+      const res = await fetch(`${localHostUrl}/list_assistants`, {
+        method: 'GET',
+        cache: 'no-cache', // This ensures no caching for this request
+        credentials: 'include',
+      });
+      const data = await res.json();
+      setAssistants(data.data);
+    };
+    const getFilesData = async () => {
+      const res = await fetch(`${localHostUrl}/get_files_for_user`, {
+        method: 'GET',
+        cache: 'no-cache', // This ensures no caching for this request
+        credentials: 'include',
+      });
+      const data = await res.json();
+      setFiles(data.data);
+    };
     getData();
+    getAssistantsData();
+    getFilesData();
   }, []);
   return (
     <NavLayout>
@@ -30,7 +52,7 @@ function JobCardPage() {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
       {jobs.map((job:any, index:number) => (
-        <JobCard key={index} job={{...job, job_url: `https://discord.com/jobs/${job.id}`}} fileText={fileText} />
+        <JobCard key={index} job={{...job, job_url: `https://discord.com/jobs/${job.id}`}} fileText={fileText} assistants={assistants} files={files}/>
       ))}
     </div>
     </main>
